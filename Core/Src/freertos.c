@@ -39,6 +39,7 @@
 #include "Buffer.h"
 #include "esp8266.h"
 #include "super_PC.h"
+#include "pid.h"
 
 /* USER CODE END Includes */
 
@@ -96,6 +97,11 @@ QueueHandle_t esp8266_mutex_handle;
 #define  Default_Temp_Thresholds   1000
 #define  Default_Hum_Thresholds    1000
 #define  Default_Light_Thresholds  1000
+
+/********pid 扩展**********/
+extern tPid  pid_MotorSpeed;
+extern tPid  pid_LED;
+
 
 /* USER CODE END PD */
 
@@ -183,6 +189,7 @@ void MX_FREERTOS_Init(void) {
 	DHT11_Init();
 	IRReceiver_Init();
 	BH1750_Init();
+	//PID_init();
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -414,6 +421,13 @@ void task_auto_ctrl(void *pvParameters)
 		{
 			if( sensor_data_show .Temp  > temp_T )											//温度超过阈值，开启风机
 					{
+						/********可扩展pid闭环控制*********/
+						/*
+							int motor_speed = (int)PID_realize(&pid_MotorSpeed,(float)(sensor_data_show .Temp - temp_T));	//通过pid算法调整当前电机速度
+							if(motor_speed > 100) motor_speed = 100;
+							turn_on_motor(FOREWARD ,motor_speed );
+						*/
+
 						turn_on_motor(FOREWARD ,50 );
 						
 						if(xSemaphoreTake( oled_mutexhandle , pdMS_TO_TICKS (1000)) == pdPASS )
@@ -464,6 +478,15 @@ void task_auto_ctrl(void *pvParameters)
 			{
 				if( sensor_data_show .Light  < light_T )											//光照低于阈值，开启补光灯
 					{
+						/********可扩展pid闭环控制*********/
+						/*
+							int LED_light = (int)PID_realize(&pid_LED,(float)(light_T - sensor_data_show .Light)); //通过pid算法调整当前补光灯亮度
+						if(LED_light > 100) LED_light = 100;																									//补光灯则需改为pwm驱动
+							turn_on_LED(LED_light);
+						*/
+						
+						
+						
 							HAL_GPIO_WritePin (GPIOB ,GPIO_PIN_9,GPIO_PIN_SET );
 						
 						if(xSemaphoreTake( oled_mutexhandle , pdMS_TO_TICKS (1000)) == pdPASS )
