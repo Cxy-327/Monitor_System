@@ -49,44 +49,32 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* 获取温㿁湿�?�光照数据任务的配置 */
+/* 获取温度、湿度、光照数据任务的配置 */
 #define TASK_GET_SENSOR_DATA_STACK 48
 #define TASK_GET_SENSOR_DATA_PRIORITY osPriorityNormal
 TaskHandle_t task_get_sensor_data_handle;
 void task_get_sensor_data(void *pvParameters);
 
-/* 温㿁湿�?�光显示任务的配�? */
+/* 温度、湿度、光照显示任务的配置 */
 #define TASK_OLED_SHOW_STACK 60
 #define TASK_OLED_SHOW_PRIORITY osPriorityNormal
 TaskHandle_t task_oled_show_handle;
 void task_oled_show(void *pvParameters);
 
 
-/* 阈忼设置接收任务的配�? */
+/* 阈值设置接收任务的配置 */
 #define TASK_THRESHOLDS_STACK 60
 #define TASK_THRESHOLDS_PRIORITY osPriorityNormal
 TaskHandle_t task_thresholds_handle;
 void task_thresholds(void *pvParameters);
 
-/* 温度阈忼监控任务的配�? */
-#define TASK_TEMP_THRESHOLDS_STACK 50
-#define TASK_TEMP_THRESHOLDS_PRIORITY osPriorityNormal
-TaskHandle_t task_temp_thresholds_handle;
-void task_temp_thresholds(void *pvParameters);
+/* 自动控制任务的配罿 */
+#define TASK_AUTO_CTRL_STACK 80
+#define TASK_AUTO_CTRL_PRIORITY osPriorityNormal
+TaskHandle_t task_auto_ctrl_handle;
+void task_auto_ctrl(void *pvParameters);
 
-/* 湿度阈忼监控任务的配�? */
-#define TASK_HUM_THRESHOLDS_STACK 50
-#define TASK_HUM_THRESHOLDS_PRIORITY osPriorityNormal
-TaskHandle_t task_hum_thresholds_handle;
-void task_hum_thresholds(void *pvParameters);
-
-/* 光照阈忼监控任务的配�? */
-#define TASK_LIGHT_THRESHOLDS_STACK 50
-#define TASK_LIGHT_THRESHOLDS_PRIORITY osPriorityNormal
-TaskHandle_t task_light_thresholds_handle;
-void task_light_thresholds(void *pvParameters);
-
-/* ESP8266数据上传PC任务的配�? */
+/* 数据上传任务的配置 */
 #define TASK_ESP8266_STACK 128
 #define TASK_ESP8266_PRIORITY osPriorityAboveNormal
 TaskHandle_t task_esp8266_handle;
@@ -104,7 +92,7 @@ QueueHandle_t data_queuehandle;
 QueueHandle_t oled_mutexhandle;
 QueueHandle_t esp8266_mutex_handle;
 
-/*温\湿�?�光 的默认阈�?*/
+/*温、湿、光的默认阈值*/
 #define  Default_Temp_Thresholds   1000
 #define  Default_Hum_Thresholds    1000
 #define  Default_Light_Thresholds  1000
@@ -132,7 +120,7 @@ QueueHandle_t esp8266_mutex_handle;
 		
 		int		temp_T = Default_Temp_Thresholds,
 					hum_T = Default_Hum_Thresholds,
-					light_T = Default_Light_Thresholds ;				//温\湿�?�光的初始阈�?
+					light_T = Default_Light_Thresholds ;				//温、湿、光初始阈值
 /* USER CODE END Variables */
 osThreadId StartDefaultTasHandle;
 osMessageQId myQueueModeHandle;
@@ -200,10 +188,10 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
 	oled_mutexhandle = xSemaphoreCreateMutex();	//创建互斥量，用于保护OLED资源
-	xSemaphoreGive(oled_mutexhandle);						//释放互斥�?
+	xSemaphoreGive(oled_mutexhandle);						//释放互斥量
 	
 	esp8266_mutex_handle = xSemaphoreCreateMutex();
-	xSemaphoreGive (esp8266_mutex_handle);	//释放，esp8266默认可获�?
+	xSemaphoreGive (esp8266_mutex_handle);	//释放
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -221,7 +209,7 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
-	data_queuehandle = xQueueCreate( 1 , sizeof ( Sensor_Data ));	//创建队列用于温�?�湿、光数据存储
+	data_queuehandle = xQueueCreate( 1 , sizeof ( Sensor_Data ));	//创建队列用于温、湿、光数据存储
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -252,27 +240,12 @@ void MX_FREERTOS_Init(void) {
                 (UBaseType_t)TASK_THRESHOLDS_PRIORITY,
                 (TaskHandle_t *)&task_thresholds_handle);
 
-    xTaskCreate((TaskFunction_t)task_temp_thresholds,
-                (char *)"task_temp_thresholds",
-                (configSTACK_DEPTH_TYPE)TASK_TEMP_THRESHOLDS_STACK,
+    xTaskCreate((TaskFunction_t)task_auto_ctrl,
+                (char *)"task_auto_ctrl",
+                (configSTACK_DEPTH_TYPE)TASK_AUTO_CTRL_STACK,
                 (void *)NULL,
-                (UBaseType_t)TASK_TEMP_THRESHOLDS_PRIORITY,
-                (TaskHandle_t *)&task_temp_thresholds_handle);
-
-    xTaskCreate((TaskFunction_t)task_hum_thresholds,
-                (char *)"task_hum_thresholds",
-                (configSTACK_DEPTH_TYPE)TASK_HUM_THRESHOLDS_STACK,
-                (void *)NULL,
-                (UBaseType_t)TASK_HUM_THRESHOLDS_PRIORITY,
-                (TaskHandle_t *)&task_hum_thresholds_handle);
-								
-    xTaskCreate((TaskFunction_t)task_light_thresholds,
-                (char *)"task_light_thresholds",
-                (configSTACK_DEPTH_TYPE)TASK_LIGHT_THRESHOLDS_STACK,
-                (void *)NULL,
-                (UBaseType_t)TASK_LIGHT_THRESHOLDS_PRIORITY,
-                (TaskHandle_t *)&task_light_thresholds_handle);
-								
+                (UBaseType_t)TASK_AUTO_CTRL_PRIORITY,
+                (TaskHandle_t *)&task_auto_ctrl_handle);
 																
 		xTaskCreate((TaskFunction_t)task_esp8266,
                 (char *)"task_esp8266",
@@ -346,7 +319,7 @@ void task_oled_show(void *pvParameters)
 			L = sensor_data_show.Light;
 			
 			
-			/*使用OLED资源前，提高互斥量，判断该资源是否可�?*/
+			/*使用OLED资源前，提高互斥量，判断该资源是否可获取*/
 			if(xSemaphoreTake( oled_mutexhandle , pdMS_TO_TICKS (1000)) == pdPASS )
 			{		
 				
@@ -371,10 +344,10 @@ void task_thresholds(void *pvParameters)
 		{
 				Thresholds_Type = IRReceiver_SetVal (& Thresholds_Val );
 			
-				if ( Thresholds_Type != 0 )					//阈忼设置完房
-				{																		//判断阈忼类垿
+				if ( Thresholds_Type != 0 )					//阈值设置完成
+				{																		//判断阈值类型
 					
-					if ( Thresholds_Type == 1)				//温度阈忿
+					if ( Thresholds_Type == 1)				//温度阈值
 					{
 							temp_T = Thresholds_Val ;
 						
@@ -391,7 +364,7 @@ void task_thresholds(void *pvParameters)
 
 					}
 					
-					else if ( Thresholds_Type == 2)		//湿度阈忿
+					else if ( Thresholds_Type == 2)		//湿度阈值
 					{
 							hum_T = Thresholds_Val ;
 						
@@ -410,7 +383,7 @@ void task_thresholds(void *pvParameters)
 						
 					}
 
-					else 															//光照阈忿 ( Thresholds_Type == 3)
+					else 															//光照阈值 ( Thresholds_Type == 3)
 					{
 							light_T = Thresholds_Val ;
 						
@@ -431,14 +404,15 @@ void task_thresholds(void *pvParameters)
 		}
 }	
 
-void task_temp_thresholds(void *pvParameters)
+void task_auto_ctrl(void *pvParameters)
 {
 	while(1)
 	{
 		vTaskDelay(500);
-		while(temp_T != Default_Temp_Thresholds)		//非默认阈值，即已设置了阈�?
+		
+		if(temp_T != Default_Temp_Thresholds)		//温度，非默认阈值
 		{
-			if( sensor_data_show .Temp  > temp_T )											//温度超过阈忼，弿启风�?
+			if( sensor_data_show .Temp  > temp_T )											//温度超过阈值，开启风机
 					{
 						turn_on_motor(FOREWARD ,50 );
 						
@@ -449,7 +423,7 @@ void task_temp_thresholds(void *pvParameters)
 						}
 						
 					}
-				else																	//温度低于阈忼，关闭风�?
+					else																	//温度低于阈值，关闭风机
 					{
 						turn_off_motor();
 						
@@ -460,23 +434,11 @@ void task_temp_thresholds(void *pvParameters)
 						}
 						
 					}
-			
-			osDelay(2000);
-
-
 		}
-	}
-	
-}
-
-void task_hum_thresholds(void *pvParameters)
-{
-	while(1)
-	{
-			vTaskDelay(500);
-			while ( hum_T  != Default_Hum_Thresholds )
+		
+			if ( hum_T  != Default_Hum_Thresholds )	//湿度
 			{
-				if( sensor_data_show.Hum < hum_T )											//湿度低于阈忼，弿启水�?
+				if( sensor_data_show.Hum < hum_T )											//湿度低于阈值，开启水泵
 					{
 						
 						if(xSemaphoreTake( oled_mutexhandle , pdMS_TO_TICKS (1000)) == pdPASS )
@@ -496,19 +458,11 @@ void task_hum_thresholds(void *pvParameters)
 						}
 						
 					}
-				osDelay(2000);
-					
 			}
-	}
-}
-void task_light_thresholds(void *pvParameters)
-{
-	while(1)
-	{
-			vTaskDelay(500);
-			while ( light_T != Default_Light_Thresholds )			
+			
+			if ( light_T != Default_Light_Thresholds )		//光照
 			{
-				if( sensor_data_show .Light  < light_T )											//光照低于阈忼，弿启补光灯
+				if( sensor_data_show .Light  < light_T )											//光照低于阈值，开启补光灯
 					{
 							HAL_GPIO_WritePin (GPIOB ,GPIO_PIN_9,GPIO_PIN_SET );
 						
@@ -530,28 +484,29 @@ void task_light_thresholds(void *pvParameters)
 						}
 						
 					}
-				osDelay(2000);
-			}
+			}			
+			
 	}
 }
+
 
 void task_esp8266(void *pvParameters)
 {		
 //	OLED_ShowString (4,10,"esp");
 	char ack[32];		//用于接收应答
-	char Sprintf_cmd[64];	//用于处理格式化命�?
-	char sensor_data[64];	//存放esp8266发�?�的数据
+	char Sprintf_cmd[64];	//用于处理格式化命令
+	char sensor_data[64];	//存放esp8266发送据
 
 
 
 ////		if(xSemaphoreTake(esp8266_mutex_handle ,portMAX_DELAY) == pdPASS)
 ////		{
-			esp8266_init();	//初始�?
+			esp8266_init();	//初始化
 //			
 //			
 			memset(Sprintf_cmd,0,sizeof(Sprintf_cmd));		
 			sprintf(Sprintf_cmd,"AT+CIPSTART=\"TCP\",\"%s\",%s",SERVER_IP ,SERVER_PORT);
-			ESP8266_Send_Cmd_GetAck(Sprintf_cmd,ack);			//发鿁TCP连接指令
+			ESP8266_Send_Cmd_GetAck(Sprintf_cmd,ack);			//发送TCP连接指令
 			if(NULL != strstr(ack,"ALREADY CONNECTED"))
 			{
 //				printf("already connected");
@@ -565,7 +520,7 @@ void task_esp8266(void *pvParameters)
 				ESP8266_Connect_TCP(SERVER_IP ,SERVER_PORT);
 			}
 			
-			ESP8266_Send_Cmd("AT+CIPMODE=0","OK");//非传透模�?
+			ESP8266_Send_Cmd("AT+CIPMODE=0","OK");//非传透模式
 			vTaskDelay(pdMS_TO_TICKS(1000));
 			
 			while(1)
@@ -577,11 +532,12 @@ void task_esp8266(void *pvParameters)
 
 					uint8_t data_length = strlen(sensor_data);
 					sprintf (Sprintf_cmd,"AT+CIPSEND=%d",data_length);
-					ESP8266_Send_Cmd (Sprintf_cmd,"OK");				//弿启数据传辿
+					ESP8266_Send_Cmd (Sprintf_cmd,"OK");				//开启数据传输
 					
-					ESP8266_Send_String ((uint8_t *)sensor_data);		//发鿁数捿
+					ESP8266_Send_String ((uint8_t *)sensor_data);		//发送数据
 					
 //					HAL_UART_Transmit(&huart3,( uint8_t *)"send sensordata\n",strlen(( const  char  *)"send sensordata\n"),1000);//1000
+					//按数据帧格式，发送传感器数据，用于匿名上位机获取，生成曲线
 					ANO_DT_Send_F2((int16_t)sensor_data_send.Temp ,(int16_t)sensor_data_send.Hum ,(int16_t)sensor_data_send.Light ,(int16_t)0);
 
 				}
